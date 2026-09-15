@@ -98,38 +98,34 @@ depths — **each component alone**, **the whole pipeline**, and **the app as a 
 
 ```mermaid
 flowchart TD
-    Q["🙋 Student question"] --> R
+    Q["Student question"] --> R
 
-    subgraph APP["The application — src/"]
+    subgraph APP["The application (src/)"]
         R["Retriever<br/>Chroma + text-embedding-3-large<br/>chunk 1000 / overlap 150"]
-        RR["Reranker<br/>cross-encoder/ms-marco-MiniLM-L-6-v2<br/>fetch_k=10 → top_k=5"]
-        G["Generator<br/>gpt-4o-mini, temperature=0<br/>faithfulness-first prompt"]
-        R -- "top 10 candidates" --> RR
-        RR -- "best 5 chunks = CONTEXT" --> G
-        G --> A["📝 ANSWER"]
+        RR["Reranker<br/>cross-encoder/ms-marco-MiniLM-L-6-v2<br/>over-fetch 10, keep top 5"]
+        G["Generator<br/>gpt-4o-mini, temperature 0<br/>faithfulness-first prompt"]
+        R -->|"top 10 candidates"| RR
+        RR -->|"best 5 chunks = CONTEXT"| G
+        G --> A["ANSWER"]
     end
 
-    subgraph EV["The eval suite — evals/"]
+    subgraph EV["The eval suite (evals/)"]
         IN["input"]
         CTX["retrieval_context"]
         OUT["actual_output"]
-        GOLD["🏅 goldens/*.json<br/>expected_output / ideal_context"]
+        GOLD["goldens JSON<br/>expected_output / ideal_context"]
         TC["LLMTestCase"]
         IN --> TC
         CTX --> TC
         OUT --> TC
         GOLD --> TC
         TC --> M["DeepEval metrics<br/>judged by a pinned LLM"]
-        M --> S["📊 score · threshold · pass/fail · reason"]
+        M --> S["score, threshold, pass/fail, reason"]
     end
 
     Q -.-> IN
     RR -.-> CTX
     A -.-> OUT
-
-    style APP fill:#eef2f7,stroke:#334155
-    style EV fill:#f3e8ff,stroke:#7c3aed
-    style S fill:#dcfce7,stroke:#16a34a
 ```
 
 **Read it like this:** the pipeline turns a question into an answer, and along the way it produces
@@ -142,18 +138,17 @@ That framing is the whole trick: **evaluation is just scoring the triad `(input,
 
 ```mermaid
 flowchart LR
-    subgraph L1["1️⃣ Component level"]
-        direction TB
+    subgraph L1["1. Component level"]
         C1["eval_retriever<br/>eval_retriever_with_reranker<br/>real retrieval, fake answer"]
         C2["eval_generator<br/>GOLDEN context, real answer"]
     end
-    subgraph L2["2️⃣ Pipeline level"]
+    subgraph L2["2. Pipeline level"]
         P1["eval_rag_pipeline<br/>RAG triad on live output"]
     end
-    subgraph L3["3️⃣ Application level"]
-        A1["eval_application<br/>correctness · completeness · style"]
-        A2["eval_toxicity · eval_scope_safety · eval_leakage<br/>safety & adversarial"]
-        A3["eval_latency · eval_cost · eval_reliability<br/>no judge, no goldens"]
+    subgraph L3["3. Application level"]
+        A1["eval_application<br/>correctness, completeness, style"]
+        A2["eval_toxicity, eval_scope_safety, eval_leakage<br/>safety and adversarial"]
+        A3["eval_latency, eval_cost, eval_reliability<br/>no judge, no goldens"]
     end
     L1 --> L2 --> L3
 ```
@@ -296,10 +291,10 @@ eleven.
 
 ```mermaid
 flowchart LR
-    S1["1️⃣ LOAD<br/>goldens/*.json"] --> S2["2️⃣ RUN<br/>your app on each golden"]
-    S2 --> S3["3️⃣ DEFINE<br/>metrics + threshold + judge"]
-    S3 --> S4["4️⃣ evaluate()<br/>score every case"]
-    S4 --> S5["📊 Report<br/>score · pass/fail · reason"]
+    S1["1. LOAD<br/>goldens JSON"] --> S2["2. RUN<br/>your app on each golden"]
+    S2 --> S3["3. DEFINE<br/>metrics, threshold, judge"]
+    S3 --> S4["4. evaluate()<br/>score every case"]
+    S4 --> S5["Report<br/>score, pass/fail, reason"]
 ```
 
 **1. Load the golden set** — the fixed, human-authored truth. Fixed matters: if the questions change
@@ -644,16 +639,16 @@ with `include_reason=True`, and `GEval` always explains its verdict. Read the re
 
 ```mermaid
 flowchart TD
-    A["1 · Run the app<br/>Streamlit UI or src.rag_pipeline"] --> B["2 · Feel the problem<br/>ask something off-topic; watch it abstain"]
-    B --> C["3 · Learn the primitives<br/>resources/deepeval_intro.py"]
-    C --> D["4 · Read a golden set<br/>goldens/retriever_goldens.json"]
-    D --> E["5 · Component evals<br/>retriever, then generator"]
-    E --> F["6 · Pipeline eval<br/>the RAG triad end-to-end"]
-    F --> G["7 · Custom metrics<br/>eval_application.py rubrics"]
-    G --> H["8 · Safety evals<br/>toxicity · scope · leakage"]
-    H --> I["9 · Operational evals<br/>latency · cost · reliability"]
-    I --> J["10 · Inspect failures<br/>read every reason, not the averages"]
-    J --> K["11 · Change one thing<br/>re-run · compare · repeat"]
+    A["1. Run the app<br/>Streamlit UI or src.rag_pipeline"] --> B["2. Feel the problem<br/>ask something off-topic, watch it abstain"]
+    B --> C["3. Learn the primitives<br/>resources/deepeval_intro.py"]
+    C --> D["4. Read a golden set<br/>goldens/retriever_goldens.json"]
+    D --> E["5. Component evals<br/>retriever, then generator"]
+    E --> F["6. Pipeline eval<br/>the RAG triad end-to-end"]
+    F --> G["7. Custom metrics<br/>eval_application.py rubrics"]
+    G --> H["8. Safety evals<br/>toxicity, scope, leakage"]
+    H --> I["9. Operational evals<br/>latency, cost, reliability"]
+    I --> J["10. Inspect failures<br/>read every reason, not the averages"]
+    J --> K["11. Change one thing<br/>re-run, compare, repeat"]
 ```
 
 The order matters: **use the app before you measure it**, and **evaluate components before the
